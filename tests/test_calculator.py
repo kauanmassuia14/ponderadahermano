@@ -159,3 +159,22 @@ class TestDesvioPadrao:
     def test_desvio_padrao_insuficiente(self):
         with pytest.raises(ValueError):
             desvio_padrao([1])
+
+
+# ---------- Testes Extras Parametrizados (Crescimento de Escopo) ----------
+
+@pytest.mark.parametrize("a,b,esperado", [
+    (1, 1, 2), (2, 2, 4), (10, 20, 30), (-1, 1, 0), (0, 0, 0),
+    (5, -5, 0), (1.1, 2.2, 3.3), (100, 200, 300), (99, 1, 100), (12, 12, 24)
+])
+def test_soma_parametrizada(a, b, esperado):
+    assert round(soma(a, b), 2) == round(esperado, 2)
+
+
+@pytest.mark.parametrize("a,b,esperado", [
+    (5, 3, 2), (10, 10, 0), (0, 5, -5), (-5, -5, 0), (100, 1, 99),
+    (1.5, 0.5, 1.0), (10, 20, -10), (50, 10, 40), (9, 9, 0), (2, 5, -3)
+])
+def test_subtracao_parametrizada(a, b, esperado):
+    assert round(subtracao(a, b), 2) == round(esperado, 2)
+
