@@ -54,4 +54,4 @@ Foram feitas 14 execuções com variações controladas (testes falhando, teste 
 
 ## Autor
 
-Kauan Massuia - Engenharia de Computação - Inteli
+Kauan Massuia - Engenharia de Software - Inteli
