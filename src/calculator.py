@@ -12,7 +12,7 @@ Number = Union[int, float]
 
 
 def soma(a: Number, b: Number) -> Number:
-    # Esta linha é um comentário extremamente longo criado intencionalmente para violar a regra de comprimento máximo de linhas configurada no linter flake8 (comprimento de 100 caracteres)
+    """Retorna a soma de dois números."""
     if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
         raise TypeError("Os argumentos devem ser numéricos")
     return a + b
