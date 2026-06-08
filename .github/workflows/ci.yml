@@ -7,64 +7,48 @@ on:
     branches: [ main ]
 
 jobs:
-  # Job 1: Análise Estática (Lint)
-  lint:
+  build-and-test:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Checkout do código
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Configuração do Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # 3. Cache das dependências pip
       - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-lint-${{ hashFiles('requirements-dev.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-lint-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-
-      - name: Run Linter (flake8)
-        run: |
-          flake8 src/ tests/ --count --statistics
-
-  # Job 2: Testes Automatizados e Métricas
-  test-and-metrics:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-test-${{ hashFiles('requirements-dev.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-test-
-
+      # 4. Instalação das dependências
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # 5. Análise estática com flake8
+      - name: Run Linter (flake8)
+        run: |
+          echo "=== Executando análise estática com flake8 ==="
+          flake8 src/ tests/ --count --statistics
+
+      # 6. Execução dos testes com pytest
       - name: Run Tests
         run: |
+          echo "=== Executando testes automatizados ==="
           pytest tests/ -v --tb=short --json-report --json-report-file=test-results.json
 
+      # 7. Upload dos resultados dos testes
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,9 +57,12 @@ jobs:
           path: test-results.json
           retention-days: 30
 
+      # 8. Coleta de métricas do pipeline
       - name: Collect pipeline metrics
         if: always()
         run: |
+          echo "=== Coletando métricas do pipeline ==="
+          # Extrair informações dos testes
           if [ -f test-results.json ]; then
             TEST_COUNT=$(python -c "import json; d=json.load(open('test-results.json')); print(d.get('summary',{}).get('total',0))")
             TEST_FAILURES=$(python -c "import json; d=json.load(open('test-results.json')); print(d.get('summary',{}).get('failed',0))")
@@ -86,6 +73,7 @@ jobs:
             TEST_DURATION=0
           fi
 
+          # Criar arquivo de métricas
           cat > pipeline-metrics.json << EOF
           {
             "run_id": "${{ github.run_id }}",
@@ -105,6 +93,7 @@ jobs:
           echo "--- Métricas coletadas ---"
           cat pipeline-metrics.json
 
+      # 9. Upload das métricas
       - name: Upload pipeline metrics
         if: always()
         uses: actions/upload-artifact@v4
