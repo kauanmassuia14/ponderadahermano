@@ -1,0 +1,16 @@
+run_id,run_number,commit_sha,commit_message,status,workflow_duration_s,job_name,job_duration_s,step_install_s,step_lint_s,step_test_s,test_count,test_failures,timestamp,cache_hit
+27111777844,14,6f00f23a,perf: removido teste de stress lento para execucao limpa final,failure,27.0,build-and-test,25.0,0.0,1.0,0,0,0,2026-06-08T01:57:38Z,unknown
+27111768915,13,09ec8716,test: adicionados 10 testes extras e sleep de 10s para stress test,failure,22.0,build-and-test,20.0,0.0,1.0,0,0,0,2026-06-08T01:57:19Z,unknown
+27111758313,12,7c90216a,ci: revertido workflow para job unico sequencial para comparacao,failure,26.0,build-and-test,24.0,0.0,0.0,0,0,0,2026-06-08T01:56:55Z,unknown
+27111752195,11,b06d29c5,ci: paralelizado o workflow em jobs separados de lint e test,failure,28.0,test-and-metrics,24.0,2.0,0,1.0,92,0,2026-06-08T01:56:40Z,unknown
+27111752195,11,b06d29c5,ci: paralelizado o workflow em jobs separados de lint e test,failure,28.0,lint,7.0,0.0,0.0,0.13,92,0,2026-06-08T01:56:40Z,unknown
+27111732512,10,12730d0c,style: corrigida a violacao de linter em calculator,failure,28.0,build-and-test,25.0,0.0,0.0,0,0,0,2026-06-08T01:55:55Z,unknown
+27111722769,9,0a292a6f,style: introduzida violacao de comprimento de linha em calculator par…,failure,23.0,build-and-test,20.0,0.0,0.0,0,0,0,2026-06-08T01:55:30Z,unknown
+27111712467,8,fd034bc6,ci: reativado o cache de dependencias pip no workflow,failure,22.0,build-and-test,20.0,0.0,0.0,0,0,0,2026-06-08T01:55:07Z,unknown
+27111706738,7,2d88d767,ci: desativado o cache de dependencias do pip,failure,23.0,build-and-test,20.0,15.0,0.0,0,0,0,2026-06-08T01:54:54Z,unknown
+27111699516,6,06cdf766,perf: removido teste lento para otimizar tempo de execucao,failure,22.0,build-and-test,19.0,0.0,0.0,0,0,0,2026-06-08T01:54:37Z,unknown
+27111691062,5,cc97c8a4,perf: adicionado teste lento com sleep de 10s para simular gargalo,failure,28.0,build-and-test,25.0,0.0,1.0,0,0,0,2026-06-08T01:54:18Z,unknown
+27111666868,4,acecfd93,test: adicionados 20 testes parametrizados adicionais para escalabili…,failure,28.0,build-and-test,25.0,0.0,1.0,0,0,0,2026-06-08T01:53:29Z,unknown
+27111652968,3,c3c2a461,test: corrigido o caso de teste de divisao por zero,success,23.0,build-and-test,21.0,0.0,0.0,1.0,72,0,2026-06-08T01:53:01Z,unknown
+27111635761,2,9afa52e2,test: adicionado caso de teste falhando intencionalmente em calculator,failure,22.0,build-and-test,20.0,0.0,0.0,1.0,72,1,2026-06-08T01:52:24Z,unknown
+27111621670,1,da037c66,"feat: setup inicial do projeto com pipeline CI/CD, 72 testes e script…",success,27.0,build-and-test,25.0,1.0,0.0,1.0,72,0,2026-06-08T01:51:55Z,unknown

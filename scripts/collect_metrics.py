@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Script de coleta de métricas do pipeline CI/CD via GitHub API.
+Script de coleta de métricas do pipeline CI/CD via GitHub API com download de artefatos.
+
+Este script consulta a API REST do GitHub para extrair dados
+das execuções e baixa os artefatos de métricas salvos pelo workflow.
 
 Uso:
     export GITHUB_TOKEN="seu_token_aqui"
@@ -11,9 +14,11 @@ Data: Junho 2026
 """
 
 import csv
+import io
 import json
 import os
 import sys
+import zipfile
 from datetime import datetime
 
 import requests
@@ -56,7 +61,6 @@ def buscar_runs():
             break
         runs.extend(batch)
         page += 1
-    print(f"Total de workflow runs encontrados: {len(runs)}")
     return runs
 
 
@@ -67,6 +71,42 @@ def buscar_jobs(run_id):
     if resp.status_code != 200:
         return []
     return resp.json().get("jobs", [])
+
+
+def baixar_dados_artefato(run_id):
+    """Busca e extrai dados de testes do artefato pipeline-metrics do run."""
+    url = f"{API_BASE}/actions/runs/{run_id}/artifacts"
+    resp = requests.get(url, headers=HEADERS)
+    if resp.status_code != 200:
+        return None
+
+    artifacts = resp.json().get("artifacts", [])
+    artifact_id = None
+    for art in artifacts:
+        if art.get("name", "").startswith(f"pipeline-metrics-{run_id}") or art.get("name", "").startswith("pipeline-metrics-"):
+            artifact_id = art.get("id")
+            break
+
+    if not artifact_id:
+        return None
+
+    # Baixar zip do artefato
+    download_url = f"{API_BASE}/actions/artifacts/{artifact_id}/zip"
+    art_resp = requests.get(download_url, headers=HEADERS)
+    if art_resp.status_code != 200:
+        return None
+
+    try:
+        # Descompactar zip na memória
+        with zipfile.ZipFile(io.BytesIO(art_resp.content)) as z:
+            for file_name in z.namelist():
+                if file_name.endswith(".json"):
+                    with z.open(file_name) as f:
+                        return json.loads(f.read().decode("utf-8"))
+    except Exception as e:
+        print(f"    [Aviso] Falha ao descompactar artefato do run {run_id}: {e}")
+
+    return None
 
 
 def processar_runs(runs):
@@ -84,6 +124,19 @@ def processar_runs(runs):
         msg = msg.replace("\n", " ").strip()[:100]
         status = run.get("conclusion", run.get("status", "unknown"))
 
+        # Tenta extrair dados reais do artefato
+        dados_teste = baixar_dados_artefato(run_id)
+        test_count = 0
+        test_failures = 0
+        test_dur = 0.0
+
+        if dados_teste:
+            test_count = dados_teste.get("test_count", 0)
+            test_failures = dados_teste.get("test_failures", 0)
+            test_dur = dados_teste.get("test_duration_s", 0.0)
+            # Se o status do workflow for failure mas o json acusa sucesso de jobs
+            # usamos as infos reais gravadas no json.
+
         jobs = buscar_jobs(run_id)
         if not jobs:
             registros.append({
@@ -91,7 +144,7 @@ def processar_runs(runs):
                 "commit_sha": sha, "commit_message": msg, "status": status,
                 "workflow_duration_s": wf_dur, "job_name": "N/A",
                 "job_duration_s": 0, "step_install_s": 0, "step_lint_s": 0,
-                "step_test_s": 0, "test_count": 0, "test_failures": 0,
+                "step_test_s": test_dur, "test_count": test_count, "test_failures": test_failures,
                 "timestamp": wf_start, "cache_hit": "unknown",
             })
             continue
@@ -109,9 +162,13 @@ def processar_runs(runs):
                 elif "lint" in nm or "flake" in nm:
                     s_lint = dur
                 elif "test" in nm and "upload" not in nm and "metric" not in nm:
-                    s_test = dur
+                    s_test = dur if dur > 0 else test_dur
                 elif "cache" in nm:
                     cache_hit = "yes" if s.get("conclusion") == "success" else "no"
+
+            # Se o job de teste passou, pegamos a duração real do teste do json
+            if s_test == 0 and test_dur > 0:
+                s_test = test_dur
 
             registros.append({
                 "run_id": run_id, "run_number": run["run_number"],
@@ -119,7 +176,7 @@ def processar_runs(runs):
                 "workflow_duration_s": wf_dur, "job_name": job.get("name", "unknown"),
                 "job_duration_s": j_dur, "step_install_s": s_install,
                 "step_lint_s": s_lint, "step_test_s": s_test,
-                "test_count": 0, "test_failures": 0,
+                "test_count": test_count, "test_failures": test_failures,
                 "timestamp": wf_start, "cache_hit": cache_hit,
             })
     return registros
@@ -144,14 +201,14 @@ def salvar(registros, csv_path, json_path):
 
 def main():
     print("=" * 60)
-    print("COLETA DE MÉTRICAS DO PIPELINE CI/CD")
+    print("COLETA DE MÉTRICAS DO PIPELINE CI/CD (COM ARTEFATOS)")
     print(f"Repositório: {OWNER}/{REPO}")
     print("=" * 60)
 
     if not TOKEN:
-        print("\nAVISO: GITHUB_TOKEN não definido.")
-        print("Limite de 60 req/hora sem autenticação.")
+        print("\nERRO: GITHUB_TOKEN é obrigatório para baixar artefatos.")
         print("Use: export GITHUB_TOKEN='seu_token'\n")
+        sys.exit(1)
 
     print("\nBuscando workflow runs...")
     runs = buscar_runs()
@@ -159,7 +216,7 @@ def main():
         print("Nenhuma execução encontrada.")
         sys.exit(0)
 
-    print("\nProcessando métricas...")
+    print("\nProcessando métricas e baixando artefatos...")
     registros = processar_runs(runs)
 
     salvar(registros, "metrics/pipeline_metrics.csv", "metrics/pipeline_metrics.json")
@@ -175,7 +232,6 @@ def main():
     duracoes = [r["workflow_duration_s"] for r in registros if r["workflow_duration_s"] > 0]
     if duracoes:
         print(f"  Duração média: {sum(duracoes)/len(duracoes):.1f}s")
-        print(f"  Min: {min(duracoes):.1f}s | Max: {max(duracoes):.1f}s")
 
 
 if __name__ == "__main__":
