@@ -70,8 +70,8 @@ class TestDivisao:
         assert divisao(10, 2) == 5.0
 
     def test_divisao_por_zero(self):
-        with pytest.raises(ZeroDivisionError):
-            divisao(10, 0)
+        # Alterado temporariamente para falhar (esperando 0 ao invés de ZeroDivisionError)
+        assert divisao(10, 0) == 0
 
     def test_divisao_resultado_decimal(self):
         assert divisao(7, 2) == 3.5
