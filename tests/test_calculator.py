@@ -180,4 +180,18 @@ def test_subtracao_parametrizada(a, b, esperado):
     assert round(subtracao(a, b), 2) == round(esperado, 2)
 
 
+@pytest.mark.parametrize("a,b,esperado", [
+    (2, 3, 6), (5, 5, 25), (-1, 5, -5), (0, 10, 0), (1.5, 2, 3.0),
+    (10, 10, 100), (0.5, 0.5, 0.25), (-2, -3, 6), (9, 9, 81), (12, 5, 60)
+])
+def test_multiplicacao_parametrizada(a, b, esperado):
+    assert round(multiplicacao(a, b), 2) == round(esperado, 2)
+
+
+def test_stress_lento():
+    time.sleep(10)
+    assert True
+
+
+
 
