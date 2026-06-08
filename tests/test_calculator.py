@@ -188,10 +188,6 @@ def test_multiplicacao_parametrizada(a, b, esperado):
     assert round(multiplicacao(a, b), 2) == round(esperado, 2)
 
 
-def test_stress_lento():
-    time.sleep(10)
-    assert True
-
 
 
 
