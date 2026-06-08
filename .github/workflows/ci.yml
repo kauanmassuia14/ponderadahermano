@@ -1,0 +1,103 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout do código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Configuração do Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. Cache das dependências pip
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4. Instalação das dependências
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # 5. Análise estática com flake8
+      - name: Run Linter (flake8)
+        run: |
+          echo "=== Executando análise estática com flake8 ==="
+          flake8 src/ tests/ --count --statistics
+
+      # 6. Execução dos testes com pytest
+      - name: Run Tests
+        run: |
+          echo "=== Executando testes automatizados ==="
+          pytest tests/ -v --tb=short --json-report --json-report-file=test-results.json
+
+      # 7. Upload dos resultados dos testes
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: test-results.json
+          retention-days: 30
+
+      # 8. Coleta de métricas do pipeline
+      - name: Collect pipeline metrics
+        if: always()
+        run: |
+          echo "=== Coletando métricas do pipeline ==="
+          # Extrair informações dos testes
+          if [ -f test-results.json ]; then
+            TEST_COUNT=$(python -c "import json; d=json.load(open('test-results.json')); print(d.get('summary',{}).get('total',0))")
+            TEST_FAILURES=$(python -c "import json; d=json.load(open('test-results.json')); print(d.get('summary',{}).get('failed',0))")
+            TEST_DURATION=$(python -c "import json; d=json.load(open('test-results.json')); print(round(d.get('duration',0),2))")
+          else
+            TEST_COUNT=0
+            TEST_FAILURES=0
+            TEST_DURATION=0
+          fi
+
+          # Criar arquivo de métricas
+          cat > pipeline-metrics.json << EOF
+          {
+            "run_id": "${{ github.run_id }}",
+            "run_number": ${{ github.run_number }},
+            "commit_sha": "${{ github.sha }}",
+            "commit_message": $(echo '${{ github.event.head_commit.message }}' | python -c "import sys,json; print(json.dumps(sys.stdin.read().strip()[:100]))"),
+            "status": "${{ job.status }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "test_count": $TEST_COUNT,
+            "test_failures": $TEST_FAILURES,
+            "test_duration_s": $TEST_DURATION,
+            "python_version": "$(python --version 2>&1)",
+            "runner_os": "${{ runner.os }}"
+          }
+          EOF
+
+          echo "--- Métricas coletadas ---"
+          cat pipeline-metrics.json
+
+      # 9. Upload das métricas
+      - name: Upload pipeline metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-metrics-${{ github.run_id }}
+          path: pipeline-metrics.json
+          retention-days: 30

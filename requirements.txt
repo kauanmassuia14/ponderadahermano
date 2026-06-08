@@ -1,0 +1,3 @@
+# Dependências de produção
+# Este projeto não possui dependências externas de produção.
+# Todos os módulos utilizam apenas a biblioteca padrão do Python.
