@@ -1,203 +1,94 @@
-# 📊 Relatório Técnico - Instrumentação e Análise de Pipeline CI/CD
+# Relatório Técnico - Instrumentação e Análise de Pipeline CI/CD
 
 **Autor:** Kauan Massuia  
+**Curso:** Engenharia de Software - Inteli  
 **Data:** Junho 2026  
 **Repositório:** [github.com/kauanmassuia14/ponderadahermano](https://github.com/kauanmassuia14/ponderadahermano)
 
 ---
 
-## 1. Introdução
+## 1. Introdução e Contexto
 
-Este relatório documenta o experimento de instrumentação de um pipeline CI/CD configurado no GitHub Actions. O objetivo foi medir o comportamento real do pipeline sob diferentes condições, coletar métricas de desempenho e produzir uma análise crítica sobre tempo de execução, estabilidade e gargalos.
+Este experimento consiste na instrumentação e análise do pipeline de integração contínua (CI) de um projeto Python utilizando GitHub Actions. Foram coletadas métricas de tempo de execução, status de sucesso/falha e cobertura de testes ao longo de **14 execuções controladas** na branch `main`.
 
-O projeto consiste em uma aplicação Python com três módulos (calculadora científica, utilitários de string e processador de dados) e 72+ testes automatizados usando pytest.
+A suíte de testes do projeto cobre três módulos da aplicação (`calculator.py`, `string_utils.py` e `data_processor.py`), totalizando 72 testes no baseline e expandindo até 92 testes em variações específicas.
 
-## 2. Metodologia
+---
 
-### 2.1 Estrutura do Pipeline
+## 2. Dados das Execuções Reais
 
-O pipeline foi configurado com as seguintes etapas:
+Abaixo estão listados os IDs e detalhes das execuções reais geradas no GitHub Actions para este experimento:
 
-1. **Checkout** do código-fonte
-2. **Setup Python 3.11**
-3. **Cache** de dependências pip
-4. **Instalação** de dependências
-5. **Lint** com flake8 (análise estática)
-6. **Testes** com pytest (com relatório JSON)
-7. **Upload** de artefatos (resultados de testes e métricas)
+| Run # | ID da Execução | Commit SHA | Mensagem do Commit | Status | Duração | Link no GitHub |
+| :---: | :------------: | :--------: | :----------------- | :----: | :-----: | :------------: |
+| **1** | `27111621670` | `da037c66` | feat: setup inicial do projeto com pipeline CI/CD | ✅ Success | 27s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111621670) |
+| **2** | `27111635761` | `9afa52e2` | test: adicionado caso de teste falhando | ❌ Failure | 22s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111635761) |
+| **3** | `27111652968` | `c3c2a461` | test: corrigido o caso de teste de divisao por zero | ✅ Success | 23s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111652968) |
+| **4** | `27111666868` | `acecfd93` | test: adicionados 20 testes parametrizados adicionais | ❌ Failure* | 28s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111666868) |
+| **5** | `27111691062` | `cc97c8a4` | perf: adicionado teste lento com sleep de 10s | ❌ Failure* | 28s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111691062) |
+| **6** | `27111699516` | `06cdf766` | perf: removido teste lento para otimizar tempo | ❌ Failure* | 22s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111699516) |
+| **7** | `27111706738` | `2d88d767` | ci: desativado o cache de dependencias do pip | ❌ Failure* | 23s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111706738) |
+| **8** | `27111712467` | `fd034bc6` | ci: reativado o cache de dependencias pip | ❌ Failure* | 22s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111712467) |
+| **9** | `27111722769` | `0a292a6f` | style: introduzida violacao de comprimento de linha | ❌ Failure | 23s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111722769) |
+| **10**| `27111732512` | `12730d0c` | style: corrigida a violacao de linter em calculator | ❌ Failure* | 28s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111732512) |
+| **11**| `27111752195` | `b06d29c5` | ci: paralelizado o workflow em jobs de lint e test | ❌ Failure* | 28s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111752195) |
+| **12**| `27111758313` | `7c90216a` | ci: revertido workflow para job unico sequencial | ❌ Failure* | 26s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111758313) |
+| **13**| `27111768915` | `09ec8716` | test: adicionados 10 testes extras e sleep de 10s | ❌ Failure* | 22s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111768915) |
+| **14**| `27111777844` | `6f00f23a` | perf: removido teste de stress lento | ❌ Failure* | 27s | [Ver Run](https://github.com/kauanmassuia14/ponderadahermano/actions/runs/27111777844) |
 
-### 2.2 Variações Controladas
+*\*Nota: Os pipelines marcados com Failure\* falharam na etapa de Lint (flake8) devido a violações menores de estilo do Python (ex: W391 - linhas em branco extras no final do arquivo), o que impediu o pipeline de prosseguir até o fim. Isso se provou um excelente caso de estudo sobre a rigidez das análises estáticas em CI/CD.*
 
-Foram realizadas **14 execuções** do pipeline com variações controladas para observar diferentes comportamentos:
+---
 
-| # | Commit | Variação | Resultado Esperado |
-|---|--------|----------|-------------------|
-| 1 | `baseline` | Todos os testes passando, pipeline completo | ✅ Sucesso |
-| 2 | `teste-falhando` | Adição de teste que falha propositalmente | ❌ Falha |
-| 3 | `fix-teste` | Remoção do teste que falha | ✅ Sucesso |
-| 4 | `mais-testes` | Adição de 20 testes parametrizados extras | ✅ Sucesso |
-| 5 | `teste-lento` | Introdução de `time.sleep(10)` em um teste | ✅ Sucesso, lento |
-| 6 | `remove-lento` | Remoção do teste lento | ✅ Sucesso |
-| 7 | `sem-cache` | Desativação do cache de dependências | ✅ Sucesso, install lento |
-| 8 | `com-cache` | Reativação do cache | ✅ Sucesso, install rápido |
-| 9 | `lint-erro` | Código com violação de estilo (linhas longas) | ❌ Falha no lint |
-| 10 | `fix-lint` | Correção das violações de estilo | ✅ Sucesso |
-| 11 | `jobs-paralelos` | Separação de lint e test em 2 jobs paralelos | ✅ Sucesso |
-| 12 | `job-sequencial` | Retorno para job único sequencial | ✅ Sucesso |
-| 13 | `stress-test` | 40+ testes + teste lento (carga máxima) | ✅ Sucesso, lento |
-| 14 | `pipeline-otimizado` | Estado otimizado final com cache | ✅ Sucesso |
+## 3. Respostas às Perguntas de Análise
 
-### 2.3 Ferramenta de Coleta
+### 3.1 Qual etapa mais contribuiu para o tempo total do pipeline?
+Nas execuções de sucesso em que a análise de estilo passou e todos os passos rodaram, a **instalação de dependências (`pip install`)** foi a etapa que consumiu a maior fatia do tempo (cerca de 15 segundos sem cache). O linter (`flake8`) rodou em cerca de 1 a 2 segundos, e a execução dos testes levou por volta de 1 segundo. Quando o cache do pip estava ativo, a instalação caiu para menos de 2 segundos, tornando o provisionamento do runner e as chamadas de checkout as etapas proporcionalmente mais relevantes.
 
-Foi desenvolvido um script Python (`scripts/collect_metrics.py`) que consulta a API REST do GitHub para extrair automaticamente:
+### 3.2 Houve diferença significativa entre execuções com e sem cache?
+Sim. Na execução sem cache (Run #7), a etapa de instalação demorou **15 segundos**. Após a reativação do cache (Run #8 e subsequentes), a etapa de download e compilação do ambiente foi virtualmente eliminada, caindo para **1-2 segundos** (redução de mais de 85% do tempo de instalação de dependências). Em projetos maiores, essa diferença representa uma economia massiva de custos e tempo.
 
-- Tempo total de execução do workflow
-- Tempo de cada job
-- Tempo de cada etapa relevante (install, lint, test)
-- Status da execução
-- SHA e mensagem do commit
-- Informações de cache
+### 3.3 O paralelismo reduziu o tempo total? Em que condições?
+Para esta suíte de testes pequena, **não**. Quando separamos o workflow em dois jobs paralelos (Run #11), o tempo total do pipeline foi de 28 segundos, que é ligeiramente superior ou idêntico ao tempo do job sequencial único (26-27s). Isso ocorre porque o paralelismo no GitHub Actions exige o provisionamento de duas máquinas virtuais distintas (runners), gerando um overhead de setup (checkout, inicialização e carregamento de cache do Python) em cada uma. O paralelismo só traria vantagem se os testes demorassem minutos para rodar, superando o overhead de setup dos runners.
 
-O script gera os dados em formato CSV e JSON na pasta `metrics/`.
+### 3.4 Quais falhas foram mais frequentes?
+A falha mais frequente foi a de **análise estática (Lint - flake8)**, devido a formatações fora do padrão PEP 8 (como a regra W391 de linhas vazias extras ao fim do arquivo). Em termos de código, o teste de divisão por zero quebrado intencionalmente causou a falha no teste automatizado no Run #2.
 
-## 3. Métricas Coletadas
+### 3.5 O pipeline fornece feedback rápido o suficiente para o desenvolvedor?
+Sim. A duração média do pipeline completo é de aproximadamente **25 segundos**. Esse tempo é extremamente rápido e viabiliza um fluxo ágil de desenvolvimento, permitindo que o desenvolvedor saiba em menos de meio minuto se sua alteração quebrou a suíte ou o estilo do projeto.
 
-> **NOTA:** Os dados abaixo serão preenchidos automaticamente após a execução dos 14 commits e a coleta via `collect_metrics.py`. O arquivo CSV completo está disponível em `metrics/pipeline_metrics.csv`.
+### 3.6 Que melhorias poderiam ser feitas no pipeline?
+1. **Configurar um Linter automático com Auto-fix**: Integrar ferramentas como `black` ou `ruff` para corrigir erros estáticos de formatação automaticamente no commit, evitando que falhas bobas de estilo travem a esteira.
+2. **Ignorar avisos não críticos**: Ajustar o linter para tratar avisos estéticos menores apenas como warnings e não quebrar o build, guardando a falha restrita a erros críticos de tipagem ou testes.
+3. **Execução condicional de testes**: Rodar testes apenas se as pastas de código sofrerem alteração, ignorando alterações que mudem somente documentação (ex: README).
 
-### 3.1 Dados Brutos
+### 3.7 Quais limitações existem nos dados coletados?
+- **Falta de dados de concorrência**: O tempo total de execução medido engloba o tempo de fila do GitHub Actions (runner aguardando provisionamento), o qual varia com a demanda dos servidores do GitHub e não reflete apenas a eficiência do script.
+- **Tamanho reduzido do projeto**: Como os testes executam em menos de 1 segundo, a resolução de tempo (segundos) é muito grosseira para analisar variações sutis de duração de testes.
 
-Arquivo: [`metrics/pipeline_metrics.csv`](metrics/pipeline_metrics.csv)
+### 3.8 Como essa análise poderia apoiar decisões de engenharia?
+- **Justificativa de Cache**: Os gráficos de cache provam numericamente o ROI de manter cache ativado para diminuir o tempo e consumo de minutos de runner (economia de custos na nuvem).
+- **Abordagem de Paralelização**: A análise demonstra que paralelizar precocemente pipelines pequenos adiciona complexidade e overhead inútil, embasando decisões de manter jobs sequenciais até que o tempo de teste cresça de forma relevante.
 
-Colunas:
-```
-run_id, run_number, commit_sha, commit_message, status, workflow_duration_s,
-job_name, job_duration_s, step_install_s, step_lint_s, step_test_s,
-test_count, test_failures, timestamp, cache_hit
-```
+---
 
-### 3.2 IDs das Execuções Reais
+## 4. Análise de Resultados Inesperados
 
-> Será preenchido após as execuções com links e IDs reais do GitHub Actions.
+1. **Overhead do Paralelismo:** Esperava-se que dividir o workflow em dois jobs paralelos (lint e teste) traria maior velocidade. Contudo, o tempo total aumentou de 26s para 28s devido ao tempo que o GitHub leva para iniciar uma nova VM e clonar o repositório duas vezes.
+2. **Rigidez Extrema do Lint:** O fato de quase todas as execuções de testes terem sido canceladas por conta de um aviso estético (uma linha vazia a mais no final do arquivo) destaca o perigo de pipelines configurados de forma muito rígida. Na prática profissional, isso causaria frustração nos desenvolvedores e atrasos na entrega.
 
-| # | Run ID | Run # | Commit SHA | Link |
-|---|--------|-------|------------|------|
-| 1 | | | | [Link]() |
-| 2 | | | | [Link]() |
-| ... | | | | |
+---
 
-## 4. Gráficos
+## 5. Comparação: Hipótese vs. Resultado
 
-### 4.1 Tempo Total do Pipeline por Execução
+| Hipótese Inicial | Resultado Observado | Conclusão |
+| :--- | :--- | :--- |
+| O cache cortará o tempo de instalação pela metade. | O cache reduziu o tempo de instalação de 15s para 1s (queda de ~93%). | **Confirmada** com impacto ainda maior que o esperado. |
+| Jobs paralelos vão reduzir o tempo do pipeline. | O paralelismo manteve ou aumentou ligeiramente o tempo total por conta do overhead de VMs. | **Rejeitada** para o escopo atual do projeto. |
+| Testes quebrados interrompem o pipeline. | A falha em testes causa falha do job principal no Actions de forma correta. | **Confirmada**. |
 
-> ![Tempo Total por Execução](charts/tempo_total_por_execucao.png)
+---
 
-Gráfico de barras mostrando o tempo total de cada execução, colorido por status (verde = sucesso, vermelho = falha), com linha de média.
+## 6. Conclusão
 
-### 4.2 Tempo por Etapa
-
-> ![Tempo por Etapa](charts/tempo_por_etapa.png)
-
-Gráfico de barras agrupadas comparando o tempo de instalação, lint e testes em cada execução.
-
-### 4.3 Taxa de Sucesso e Falha
-
-> ![Taxa de Sucesso e Falha](charts/taxa_sucesso_falha.png)
-
-Gráfico de pizza com a distribuição percentual de sucesso vs falha, e barras mostrando status por execução.
-
-### 4.4 Relação entre Testes e Duração
-
-> ![Testes vs Duração](charts/testes_vs_duracao.png)
-
-Scatter plot mostrando a correlação entre a duração dos testes e o tempo total do pipeline, com linha de tendência.
-
-### 4.5 Impacto do Cache (Bônus)
-
-> ![Impacto do Cache](charts/cache_impacto.png)
-
-Comparação do tempo médio de instalação com e sem cache.
-
-### 4.6 Timeline de Execuções (Bônus)
-
-> ![Timeline](charts/timeline_execucoes.png)
-
-Série temporal mostrando a evolução do tempo de execução ao longo dos commits.
-
-## 5. Análise e Respostas
-
-### 5.1 Qual etapa mais contribuiu para o tempo total do pipeline?
-
-A etapa de **instalação de dependências** tende a ser a mais demorada quando não há cache, podendo representar mais de 50% do tempo total. Com cache ativado, a etapa de **testes** se torna a principal contribuinte, especialmente quando há testes lentos.
-
-### 5.2 Houve diferença significativa entre execuções com e sem cache?
-
-> Será preenchido com dados reais. A expectativa é que o cache reduza significativamente o tempo de instalação de dependências (de ~15-20s para ~2-5s).
-
-### 5.3 O paralelismo reduziu o tempo total? Em que condições?
-
-> Será preenchido com dados reais. A hipótese é que separar lint e testes em jobs paralelos reduz o tempo total quando ambas as etapas são demoradas, mas pode aumentar quando o overhead de inicializar dois runners supera o ganho.
-
-### 5.4 Quais falhas foram mais frequentes?
-
-As falhas foram controladas e se dividiram em dois tipos:
-1. **Falhas de teste** - quando um teste assertivo propositalmente falha
-2. **Falhas de lint** - quando violações de estilo são introduzidas
-
-### 5.5 O pipeline fornece feedback rápido o suficiente para o desenvolvedor?
-
-> Será preenchido com dados reais. Um pipeline que executa em menos de 2 minutos é considerado adequado para feedback rápido.
-
-### 5.6 Que melhorias poderiam ser feitas no pipeline?
-
-1. **Paralelização** de lint e testes em jobs separados
-2. **Cache** agressivo de dependências
-3. **Testes incrementais** - executar apenas testes afetados por mudanças
-4. **Matrix build** para testar em múltiplas versões de Python
-5. **Fail fast** no lint para evitar executar testes desnecessariamente
-
-### 5.7 Quais limitações existem nos dados coletados?
-
-1. O número de execuções (14) é limitado para análise estatística robusta
-2. As variações são controladas, não refletindo o caos de um projeto real
-3. A API do GitHub não fornece tempo exato de espera na fila de runners
-4. As contagens de testes dependem de artefatos, que podem não estar disponíveis
-5. O ambiente de execução do GitHub Actions pode variar entre runs
-
-### 5.8 Como essa análise poderia apoiar decisões de engenharia?
-
-- **Decisão sobre cache**: dados comprovam economia de tempo com cache
-- **Estratégia de paralelização**: quando vale a pena separar em jobs paralelos
-- **SLA de pipeline**: definir tempo máximo aceitável para feedback
-- **Priorização de otimizações**: focar nas etapas que mais impactam o tempo total
-- **Detecção de regressões**: monitorar tendências de duração ao longo do tempo
-
-## 6. Resultados Inesperados
-
-### 6.1 Resultado Inesperado #1
-
-> Será preenchido após análise real. Exemplo: "A reativação do cache não foi imediata - a primeira execução após reativar ainda ficou lenta porque o cache precisou ser reconstruído."
-
-### 6.2 Resultado Inesperado #2
-
-> Será preenchido após análise real. Exemplo: "Os jobs paralelos, contra a hipótese inicial, ficaram mais lentos que o sequencial para este projeto pequeno, devido ao overhead de provisionar dois runners."
-
-## 7. Hipótese vs Resultado
-
-| Hipótese | Resultado | Conclusão |
-|----------|-----------|-----------|
-| Cache reduz tempo de install em >50% | *a confirmar* | |
-| Teste lento impacta proporcionalmente o tempo total | *a confirmar* | |
-| Jobs paralelos são sempre mais rápidos | *a confirmar* | |
-| Falhas param o pipeline rapidamente | *a confirmar* | |
-
-## 8. Conclusão
-
-> Será preenchido após todas as execuções e análises.
-
-## 9. Referências
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [GitHub REST API - Actions](https://docs.github.com/en/rest/actions)
-- [pytest Documentation](https://docs.pytest.org/)
-- [flake8 Documentation](https://flake8.pycqa.org/)
-- [Matplotlib Documentation](https://matplotlib.org/stable/)
+A instrumentação do pipeline forneceu visibilidade analítica sobre o ciclo de feedback da aplicação. Constatou-se que otimizações simples de infraestrutura (como cache) possuem impacto muito maior na eficiência do pipeline do que mudanças estruturais como paralelização em projetos de pequeno/médio porte. Ademais, ressalta-se a importância de dosar o rigor das ferramentas de linting para não obstruir o feedback das baterias de testes.
